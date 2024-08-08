@@ -1,13 +1,10 @@
-import "dart:convert";
-
-import "package:flutter_weather_app/secrets.dart";
-import "package:http/http.dart" as http;
-
+import "package:flutter_bloc/flutter_bloc.dart";
+import "package:flutter_weather_app/bloc/weather_bloc.dart";
 import "package:flutter/material.dart";
-import "package:flutter_weather_app/components/additional_info_card.dart";
-import "package:flutter_weather_app/components/main_card.dart";
+import "package:flutter_weather_app/presentation/widgets/additional_info_card.dart";
+import "package:flutter_weather_app/presentation/widgets/main_card.dart";
 
-import "package:flutter_weather_app/components/weather_forecast_card.dart";
+import "package:flutter_weather_app/presentation/widgets/weather_forecast_card.dart";
 import "package:intl/intl.dart";
 
 class WeatherScreen extends StatefulWidget {
@@ -18,32 +15,10 @@ class WeatherScreen extends StatefulWidget {
 }
 
 class _WeatherScreenState extends State<WeatherScreen> {
-  late Future<Map<String, dynamic>> weather;
-
-  Future<Map<String, dynamic>> getCurrentWeather() async {
-    String cityName = "London";
-    String countryName = "uk";
-    String apiDomain = "https://api.openweathermap.org";
-    Uri url = Uri.parse(
-        '$apiDomain/data/2.5/forecast?q=$cityName,$countryName&APPID=$OPEN_WEATHER_API_KEY');
-    try {
-      final res = await http.get(url);
-      final data = jsonDecode(res.body);
-      if (res.statusCode != 200 || data['cod'] != '200') {
-        throw 'An unextended error occurred';
-      }
-
-      // double temp = data['list'][0]['main']['temp'];
-      return data;
-    } catch (e) {
-      throw e.toString();
-    }
-  }
-
   @override
   void initState() {
     super.initState();
-    weather = getCurrentWeather();
+    context.read<WeatherBloc>().add(WeatherFetched());
   }
 
   @override
@@ -59,7 +34,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
           IconButton(
               onPressed: () {
                 setState(() {
-                  weather = getCurrentWeather();
+                  context.read<WeatherBloc>().add(WeatherFetched());
                 });
               },
               icon: const Icon(
@@ -67,29 +42,32 @@ class _WeatherScreenState extends State<WeatherScreen> {
               ))
         ],
       ),
-      body: FutureBuilder(
-        future: weather,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: BlocBuilder<WeatherBloc, WeatherState>(
+        builder: (context, state) {
+          // if (state.connectionState == ConnectionState.waiting) {
+          //   return const Center(
+          //     child: CircularProgressIndicator.adaptive(),
+          //   );
+          // }
+          // if (snapshot.hasError) {
+          //   return Center(child: Text(snapshot.error.toString()));
+          // }
+          if (state is WeatherFailure) {
+            return Center(child: Text(state.error));
+          }
+          if (state is! WeatherSuccess) {
             return const Center(
-              child: CircularProgressIndicator.adaptive(),
+              child: CircularProgressIndicator(),
             );
           }
-          if (snapshot.hasError) {
-            return Center(child: Text(snapshot.error.toString()));
-          }
 
-          final data = snapshot.data!;
-          final currentWeatherData = data['list'][0];
-          final double currentTemperature = currentWeatherData['main']['temp'];
-          final String currentWeatherState =
-              currentWeatherData['weather'][0]['main'];
-          final String currentPressure =
-              currentWeatherData['main']['pressure'].toString();
-          final String currentHumidity =
-              currentWeatherData['wind']['speed'].toString();
-          final String currentWindSpeed =
-              currentWeatherData['main']['humidity'].toString();
+          final data = state.weatherModel.currentWeather;
+
+          final double currentTemperature = data.currentTemp;
+          final String currentWeatherState = data.currentSky;
+          final double currentPressure = data.currentPressure;
+          final double currentHumidity = data.currentHumidity;
+          final double currentWindSpeed = data.currentWindSpeed;
 
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
@@ -132,13 +110,18 @@ class _WeatherScreenState extends State<WeatherScreen> {
                     scrollDirection: Axis.horizontal,
                     itemCount: 5,
                     itemBuilder: (context, index) {
-                      final hourlyForecastData = data['list'][index + 1];
-                      final time = DateTime.parse(hourlyForecastData['dt_txt']);
+                      final hourlyForecastData =
+                          state.weatherModel.hourlyWeather[index + 1];
+
+                      final time =
+                          DateTime.parse(hourlyForecastData.hourlyTime);
+                      final hourlyTemp = hourlyForecastData.hourlyTemperature;
+                      final hourlySky = hourlyForecastData.hourlySky;
+
                       return WeatherForecastCard(
                           time: DateFormat.Hm().format(time),
-                          temperature: hourlyForecastData['main']['temp'],
-                          weatherState: hourlyForecastData['weather'][0]
-                              ['main']);
+                          temperature: hourlyTemp,
+                          weatherState: hourlySky);
                     },
                   ),
                 ),
@@ -153,20 +136,20 @@ class _WeatherScreenState extends State<WeatherScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    const AdditionalInfoCard(
+                    AdditionalInfoCard(
                       name: "Humidity",
                       icon: Icons.water_drop,
-                      value: "90",
+                      value: currentHumidity.toString(),
                     ),
                     AdditionalInfoCard(
-                      name: currentHumidity,
+                      name: "Wind Speed",
                       icon: Icons.air,
-                      value: currentWindSpeed,
+                      value: currentWindSpeed.toString(),
                     ),
                     AdditionalInfoCard(
                       name: "Pressure",
                       icon: Icons.thermostat,
-                      value: currentPressure,
+                      value: currentPressure.toString(),
                     )
                   ],
                 )
