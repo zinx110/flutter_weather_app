@@ -36,7 +36,7 @@ class WeatherForecastCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              "${temperature.toStringAsFixed(2)} °C",
+              "${(temperature - 273.16).toStringAsFixed(2)} °C",
               style: const TextStyle(
                 fontSize: 14,
               ),

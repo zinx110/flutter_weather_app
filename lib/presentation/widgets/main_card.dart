@@ -28,7 +28,7 @@ class MainCard extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    "${temparature.toStringAsFixed(2)} °C",
+                    "${(temparature - 273.16).toStringAsFixed(2)} °C",
                     style: const TextStyle(
                         fontSize: 32, fontWeight: FontWeight.bold),
                   ),
