@@ -4,5 +4,6 @@ weather app made with flutter and openweather api. I did this project for learni
 
 ### Refactored into bloc architecture.
 
-![image](https://github.com/user-attachments/assets/0c4504d7-72d7-4c05-855a-90afc5b6dd2d)
+![image](https://github.com/user-attachments/assets/23c1d13d-1848-41d6-8694-44a8c75cf364)
+
 
